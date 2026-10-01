@@ -1,0 +1,30 @@
+# SNIPER ARENA: what is on at the lodge.
+# The world reads this file a few seconds after each player joins, then every 30 minutes.
+# One "key: value" per line. A line that starts with # is a note and is skipped.
+#
+# RIGHT NOW EVERY LINE BELOW IS A NOTE (#), SO THE BOARD SHOWS WHAT IS BUILT INTO THE WORLD:
+#   the event and its time in each player's own clock ("ON NOW" while it runs), and the coming-soon line that turns
+#   by itself on Friday 2 October at 7 pm Pacific to "New: Dragunov SVD + Tabuk".
+# As soon as ANY line below is switched on (the # removed), this file replaces the whole board:
+#   a key you leave out is left off the board, and the board stops turning by the clock.
+# Keep lines short: the board is 90 cm wide, the TV line fits about 35 characters. Jane's words only.
+
+# the weekly event: the board's big title, and the TV's first line
+# event: FRIDAY NIGHT SNIPERS
+# when: leave this one off to show each player the time in their own clock; a when: line is shown exactly as written
+# when: every Friday, 7 pm to 2 am Pacific
+
+# a reveal night on the board (the SAMSON stand below the board says "UNVEIL PARTY · FRIDAY" itself)
+# reveal: UNVEIL PARTY · FRIDAY
+# reveal_line: Samson, a new Unique, first look
+
+# what is coming: up to 3 lines on the board
+# coming: New: Dragunov SVD + Tabuk
+
+# announcements on the TV's far screen, one after another every 7 seconds (up to 8)
+# tv: NEW: DRAGUNOV SVD + TABUK
+
+# optional: the TV's own words for the event line, and the two small labels over the TV lines
+# tv_event: Friday Night Snipers · 7 pm Pacific
+# tv_label: THIS WEEK AT THE LODGE
+# tv_label_teaser: COMING SOON
