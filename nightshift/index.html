@@ -1,0 +1,586 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Night Shift</title>
+<meta name="description" content="NIGHT SHIFT: a tiny text RPG for the tenants of Building 77.">
+<meta name="theme-color" content="#07060d">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #07060d;
+    --panel: #0d0b17;
+    --rule: #3a2f63;
+    --cyan: #5ff3ff;
+    --mag: #ff5fd2;
+    --amber: #ffb347;
+    --white: #f2f0ff;
+    --grey: #7b7896;
+    --red: #ff5f6d;
+    --glow: 0 0 6px rgba(95, 243, 255, .35);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    background: radial-gradient(ellipse at 50% 30%, #151027 0%, var(--bg) 70%);
+    color: var(--cyan);
+    font-family: "IBM Plex Mono", ui-monospace, "Cascadia Mono", Consolas, "Noto Sans Mono", monospace;
+    /* 50ch frame (46 text cols + border/padding) must fit a phone with a 16px gutter */
+    font-size: clamp(9.5px, calc((100vw - 32px) / 30.5), 17px);
+    line-height: 1.38;
+    display: flex; justify-content: center; align-items: flex-start;
+    padding: max(16px, env(safe-area-inset-top)) 16px 24px;
+    -webkit-text-size-adjust: 100%;
+  }
+  .crt {
+    position: relative; width: 50ch; max-width: 100%; min-width: 0;
+    background: var(--panel);
+    border: 1px solid var(--rule); border-radius: 10px;
+    box-shadow: 0 0 0 1px #000, 0 0 40px rgba(255, 95, 210, .12), inset 0 0 60px rgba(0, 0, 0, .6);
+    padding: 1.1ch 2ch 1.3ch; overflow: hidden;
+  }
+  .crt::after {   /* scanlines */
+    content: ""; position: absolute; inset: 0; pointer-events: none;
+    background: repeating-linear-gradient(to bottom, rgba(255,255,255,.035) 0 1px, transparent 1px 3px);
+    mix-blend-mode: screen;
+  }
+  .crt::before {  /* vignette */
+    content: ""; position: absolute; inset: 0; pointer-events: none;
+    background: radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,.45) 100%);
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .crt { animation: flicker 6s infinite steps(1); }
+    @keyframes flicker { 0%, 96%, 100% { opacity: 1; } 97% { opacity: .93; } }
+  }
+  header { display: flex; justify-content: space-between; color: var(--amber); font-weight: 600; letter-spacing: .02em; }
+  header .tag { color: var(--mag); font-weight: 400; }
+  .status { white-space: pre; color: var(--cyan); }
+  .status .amb { color: var(--amber); }
+  .status .mag { color: var(--mag); }
+  .status .low { color: var(--red); }
+  .status .dim { color: var(--grey); }
+  .items { color: var(--grey); white-space: normal; }
+  hr { border: 0; border-top: 1px dashed var(--rule); margin: .55em 0; }
+  #text { white-space: pre; color: var(--cyan); text-shadow: var(--glow); min-height: calc(7 * 1.38em); margin: 0; font: inherit; overflow-x: auto; }
+  #strip { color: var(--amber); min-height: 1.38em; white-space: pre-wrap; }
+  ol#choices { list-style: none; margin: 0; padding: 0; display: grid; gap: .35em; }
+  ol#choices button {
+    width: 100%; text-align: left; font: inherit; color: var(--white);
+    background: transparent; border: 1px solid transparent; border-radius: 6px;
+    padding: .35em .6ch; cursor: pointer; display: flex; gap: 1ch; min-height: 2.6em; align-items: center;
+  }
+  ol#choices button .n { color: var(--mag); font-weight: 600; }
+  ol#choices button:hover, ol#choices button:focus-visible { border-color: var(--mag); background: rgba(255,95,210,.08); outline: none; }
+  ol#choices button.locked { color: var(--grey); }
+  ol#choices button.locked .n { color: var(--grey); }
+  #keypad { display: grid; gap: .5em; margin-top: .4em; }
+  #keypad[hidden] { display: none; }
+  #keypad .hint { color: var(--amber); }
+  #keypad .row { display: flex; gap: 1ch; }
+  #keypad input {
+    flex: 1; font: inherit; font-size: max(16px, 1em); text-transform: uppercase; letter-spacing: .2em;
+    background: #000; color: var(--cyan); border: 1px solid var(--cyan); border-radius: 6px; padding: .4em .8ch;
+  }
+  #keypad button { font: inherit; color: var(--bg); background: var(--mag); border: 0; border-radius: 6px; padding: .4em 1.4ch; cursor: pointer; }
+  #keypad button.ghost { background: transparent; color: var(--grey); border: 1px solid var(--rule); }
+  footer { color: var(--grey); margin-top: .7em; display: flex; justify-content: space-between; gap: 1ch; flex-wrap: wrap; }
+  footer button { font: inherit; color: var(--grey); background: none; border: 0; padding: 0; cursor: pointer; text-decoration: underline; }
+  #debug { color: var(--grey); white-space: pre-wrap; margin-top: .5em; }
+  .boot { color: var(--grey); white-space: pre-wrap; }
+</style>
+</head>
+<body>
+<main class="crt" aria-live="polite">
+  <header><span>NIGHT SHIFT // BLDG 77 // 7704</span><span class="tag" id="tag"></span></header>
+  <div class="status" id="status"></div>
+  <div class="items" id="items"></div>
+  <hr>
+  <pre id="text" class="boot">BOOTING TENANT TERMINAL...</pre>
+  <hr>
+  <div id="strip"></div>
+  <hr>
+  <ol id="choices"></ol>
+  <form id="keypad" hidden autocomplete="off">
+    <div class="hint" id="hint"></div>
+    <div class="row">
+      <input id="code" maxlength="8" inputmode="text" autocapitalize="characters" spellcheck="false" aria-label="code">
+      <button type="submit">ENTER</button>
+      <button type="button" class="ghost" id="cancel">BACK</button>
+    </div>
+  </form>
+  <footer><span id="keys">keys 1-4 · checkpoints autosave</span><button type="button" id="wipe">reset save</button></footer>
+  <div id="debug"></div>
+</main>
+
+<!-- ================================================================ ENGINE
+     Port of tools/nsdata.py. Keep the two in step: tools/crosscheck_web.py
+     fuzzes both with the same seeds and compares every step. -->
+<script id="ns-engine">
+var NS = (function () {
+  "use strict";
+  var COLS = 46, MAX_LINES = 7, RESERVED = ["CHECKPOINT", "RETURN"];
+  var KEYS = ["cond", "do", "goto", "say", "roll", "pass", "fail", "pdo", "fdo", "psay", "fsay", "input", "hint", "locked"];
+
+  function parseCond(s, errs, ln) {
+    return s.split(" OR ").map(function (disj) {
+      var conj = [];
+      disj.split("&").forEach(function (raw) {
+        var a = raw.trim();
+        if (!a) { errs.push([ln, "empty term"]); return; }
+        var neg = false;
+        if (a.charAt(0) === "!") { neg = true; a = a.slice(1).trim(); }
+        if (a.indexOf("has ") === 0) { conj.push(["flag", a.slice(4).trim(), neg]); return; }
+        if (a === "subs") { conj.push(["subs", neg]); return; }
+        var m = a.match(/^([A-Za-z_][A-Za-z0-9_]*)\s*(>=|<=|==|!=|>|<)\s*(-?\d+)$/);
+        if (m && !neg) conj.push(["cmp", m[1], m[2], parseInt(m[3], 10)]);
+        else errs.push([ln, "bad condition term " + raw.trim()]);
+      });
+      return conj;
+    });
+  }
+
+  function parseEffects(s, errs, ln) {
+    var out = [];
+    s.split(",").forEach(function (raw) {
+      var e = raw.trim();
+      if (!e) return;
+      if (e === "reset" || e === "clearsave") out.push([e]);
+      else if (e.indexOf("set ") === 0) out.push(["set", e.slice(4).trim()]);
+      else if (e.indexOf("clear ") === 0) out.push(["clear", e.slice(6).trim()]);
+      else {
+        var m = e.match(/^([A-Za-z_][A-Za-z0-9_]*)\s*([+\-=])\s*(-?\d+)$/);
+        if (m) out.push(["var", m[1], m[2], parseInt(m[3], 10)]);
+        else errs.push([ln, "bad effect " + e]);
+      }
+    });
+    return out;
+  }
+
+  function partition(s, sep) {
+    var i = s.indexOf(sep);
+    return i < 0 ? [s, "", ""] : [s.slice(0, i), sep, s.slice(i + sep.length)];
+  }
+
+  function parse(src) {
+    var g = { meta: {}, start: null, onko: null, onheat: null, onlow: null, vars: {}, varOrder: [],
+              items: {}, itemOrder: [], flags: [], nodes: {}, nodeOrder: [], tables: {}, errors: [] };
+    var cur = null, curTable = null;
+    var lines = src.replace(/\r\n?/g, "\n").split("\n");
+    if (lines.length && lines[lines.length - 1] === "") lines.pop();
+    for (var i = 0; i < lines.length; i++) {
+      var ln = i + 1, line = lines[i].replace(/\s+$/, "");
+      if (/^\s*#/.test(line)) continue;
+      if (line.charAt(0) === "@") {
+        curTable = null;
+        var parts = line.trim().split(/\s+/), d = parts[0];
+        if (d === "@node") {
+          var n = { id: parts[1], checkpoint: false, subsOnly: false, ending: null, text: [], choices: [] };
+          parts.slice(2).forEach(function (t) {
+            if (t === "CHECKPOINT") n.checkpoint = true;
+            else if (t === "SUBS_ONLY") n.subsOnly = true;
+            else if (t.indexOf("ENDING:") === 0) n.ending = t.slice(7);
+            else g.errors.push([ln, "unknown tag " + t]);
+          });
+          g.nodes[n.id] = n; g.nodeOrder.push(n.id); cur = n;
+          continue;
+        }
+        cur = null;
+        if (d === "@random") { g.tables[parts[1]] = []; curTable = parts[1]; }
+        else if (d === "@game" || d === "@version") g.meta[d.slice(1)] = line.slice(d.length).trim();
+        else if (d === "@start") g.start = parts[1];
+        else if (d === "@onko") g.onko = parts[1];
+        else if (d === "@onheat") g.onheat = parts[1];
+        else if (d === "@onlow") g.onlow = [parseInt(parts[1], 10), parts[2], parts[3]];
+        else if (d === "@stat" || d === "@skill" || d === "@var") {
+          g.vars[parts[1]] = { init: parseInt(parts[2], 10), min: parseInt(parts[3], 10), max: parseInt(parts[4], 10),
+                               label: parts.slice(5).join(" ") || parts[1], kind: d.slice(1) };
+          g.varOrder.push(parts[1]);
+        } else if (d === "@item") { g.items[parts[1]] = parts.slice(2).join(" "); g.itemOrder.push(parts[1]); }
+        else if (d === "@flag") g.flags.push(parts[1]);
+        else g.errors.push([ln, "unknown directive " + d]);
+        continue;
+      }
+      if (curTable !== null) {
+        var s = line.trim();
+        if (!s) { curTable = null; continue; }
+        if (s.indexOf("- ") !== 0) { g.errors.push([ln, "bad table line"]); continue; }
+        var p = partition(s.slice(2), "|"), bits = p[0].trim().split(/\s+/), rest = p[2].trim(), cond = null;
+        if (rest) cond = parseCond(rest.slice(5).trim(), g.errors, ln);
+        g.tables[curTable].push([parseInt(bits[0], 10), bits[1], cond]);
+        continue;
+      }
+      if (!cur) continue;
+      if (line.charAt(0) === ">") {
+        var m = line.match(/^>\s*(\d+)\s+(.*)$/);
+        if (!m) { g.errors.push([ln, "bad choice"]); continue; }
+        var fields = m[2].split(" | ").map(function (x) { return x.trim(); });
+        var ch = { num: parseInt(m[1], 10), label: fields[0], raw: {}, cond: null, do: [], pdo: [], fdo: [],
+                   goto: null, say: null, pass: null, fail: null, psay: null, fsay: null, roll: null,
+                   input: null, hint: null, locked: null };
+        fields.slice(1).forEach(function (fld) {
+          var key, val;
+          if (fld.indexOf("goto ") === 0 || fld.indexOf("goto:") === 0) { key = "goto"; val = fld.slice(5).replace(/^:+/, "").trim(); }
+          else { var q = partition(fld, ":"); key = q[0].trim(); val = q[2].trim(); }
+          if (KEYS.indexOf(key) < 0) { g.errors.push([ln, "unknown field " + key]); return; }
+          ch.raw[key] = val;
+        });
+        var r = ch.raw;
+        if ("cond" in r) ch.cond = parseCond(r.cond, g.errors, ln);
+        if ("do" in r) ch.do = parseEffects(r.do, g.errors, ln);
+        if ("pdo" in r) ch.pdo = parseEffects(r.pdo, g.errors, ln);
+        if ("fdo" in r) ch.fdo = parseEffects(r.fdo, g.errors, ln);
+        ["goto", "say", "psay", "fsay", "hint", "locked"].forEach(function (k) { if (k in r) ch[k] = r[k]; });
+        if ("pass" in r) ch.pass = r.pass;
+        if ("fail" in r) ch.fail = r.fail;
+        if ("roll" in r) {
+          var mm = r.roll.match(/^(\d+)\s*\+\s*([A-Za-z_][A-Za-z0-9_]*)$/);
+          if (mm) ch.roll = [parseInt(mm[1], 10), mm[2]]; else g.errors.push([ln, "bad roll"]);
+        }
+        if ("input" in r) ch.input = r.input.toUpperCase();
+        cur.choices.push(ch);
+        continue;
+      }
+      if (cur.choices.length) continue;
+      if (line.charAt(0) === "?") {
+        var pp = partition(line.slice(1), ":");
+        if (!pp[1]) { g.errors.push([ln, "bad conditional line"]); continue; }
+        var txt = pp[2].charAt(0) === " " ? pp[2].slice(1) : pp[2];
+        cur.text.push([parseCond(pp[0].trim(), g.errors, ln), txt]);
+      } else cur.text.push([null, line]);
+    }
+    g.nodeOrder.forEach(function (id) {
+      var t = g.nodes[id].text;
+      while (t.length && t[t.length - 1][0] === null && !t[t.length - 1][1].trim()) t.pop();
+    });
+    return g;
+  }
+
+  function cmp(v, op, n) {
+    switch (op) { case ">=": return v >= n; case "<=": return v <= n; case "==": return v === n;
+                  case "!=": return v !== n; case ">": return v > n; default: return v < n; }
+  }
+  function evalAtom(a, s, subs) {
+    if (a[0] === "flag") return (s.flags.has(a[1])) !== a[2];
+    if (a[0] === "subs") return subs !== a[1];
+    return cmp(s.vars[a[1]] || 0, a[2], a[3]);
+  }
+  function evalCond(dnf, s, subs) {
+    if (!dnf || !dnf.length) return true;
+    return dnf.some(function (conj) { return conj.every(function (a) { return evalAtom(a, s, subs); }); });
+  }
+
+  function newState(g) {
+    var v = {};
+    g.varOrder.forEach(function (k) { v[k] = g.vars[k].init; });
+    return { node: g.start, vars: v, flags: new Set(), lastcp: null, ret: null, endings: new Set(), saveNow: false, cleared: false };
+  }
+  function copy(s) {
+    return { node: s.node, vars: Object.assign({}, s.vars), flags: new Set(s.flags), lastcp: s.lastcp, ret: s.ret,
+             endings: new Set(s.endings), saveNow: false, cleared: false };
+  }
+  function clamp(g, s, k) { var v = g.vars[k]; s.vars[k] = Math.max(v.min, Math.min(v.max, s.vars[k])); }
+  function applyEffects(g, s, effs) {
+    effs.forEach(function (e) {
+      if (e[0] === "set") s.flags.add(e[1]);
+      else if (e[0] === "clear") s.flags.delete(e[1]);
+      else if (e[0] === "reset") { var f = newState(g); s.vars = f.vars; s.flags = new Set(); s.lastcp = null; s.ret = null; }
+      else if (e[0] === "clearsave") s.cleared = true;
+      else {
+        if (e[2] === "+") s.vars[e[1]] += e[3]; else if (e[2] === "-") s.vars[e[1]] -= e[3]; else s.vars[e[1]] = e[3];
+        clamp(g, s, e[1]);
+      }
+    });
+  }
+  function targets(ch) { return [ch.goto, ch.pass, ch.fail].filter(Boolean); }
+  function gated(g, node, ch) {
+    if (node.subsOnly) return false;
+    return targets(ch).some(function (t) { return g.nodes[t] && g.nodes[t].subsOnly; });
+  }
+  function visibleChoices(g, s, subs) {
+    var node = g.nodes[s.node], out = [];
+    node.choices.forEach(function (ch) {
+      if (!evalCond(ch.cond, s, subs)) return;
+      out.push({ ch: ch, locked: gated(g, node, ch) && !subs });
+    });
+    return out;
+  }
+  function interp(txt, vars) {
+    return txt.replace(/\{([A-Za-z_][A-Za-z0-9_]*)\}/g, function (m, k) { return k in vars ? String(vars[k]) : m; });
+  }
+  function renderText(g, s, subs) {
+    return g.nodes[s.node].text.filter(function (t) { return !t[0] || evalCond(t[0], s, subs); })
+      .map(function (t) { return interp(t[1], s.vars); });
+  }
+  function resolveTarget(g, s, target, dec, subs) {
+    if (target === "CHECKPOINT") return s.lastcp || g.start;
+    if (target === "RETURN") {
+      var r = s.ret || s.lastcp || g.start;
+      s.ret = null;
+      return (RESERVED.indexOf(r) >= 0 || r.charAt(0) === "@") ? resolveTarget(g, s, r, dec, subs) : r;
+    }
+    if (target.charAt(0) === "@") {
+      var ent = g.tables[target.slice(1)].filter(function (e) { return evalCond(e[2], s, subs); });
+      return dec.choose("table", ent.map(function (e) { return e[1]; }), ent.map(function (e) { return e[0]; }));
+    }
+    return target;
+  }
+  function enter(g, s, id) {
+    s.node = id;
+    var n = g.nodes[id];
+    if (n.checkpoint) { s.lastcp = id; s.saveNow = true; }
+    if (n.ending) s.endings.add(n.ending);
+  }
+  function step(g, s0, ch, dec, subs) {
+    var s = copy(s0), info = { roll: null, toast: null, hook: null, inputOk: null }, target, ok;
+    var hpBefore = s.vars.hp || 0;
+    applyEffects(g, s, ch.do);
+    if (ch.roll || ch.input !== null) {
+      if (ch.roll) {
+        var val = s.vars[ch.roll[1]] || 0, die = dec.choose("roll", null);
+        ok = die === 6 || die + val >= ch.roll[0];
+        info.roll = "[ROLL " + die + "+" + val + " vs " + ch.roll[0] + ": " + (ok ? "PASS" : "FAIL") + "]";
+      } else {
+        var typed = dec.choose("input", null);
+        ok = String(typed).replace(/\s+/g, "").toUpperCase() === ch.input;
+        info.inputOk = ok;
+      }
+      if (ok) { applyEffects(g, s, ch.pdo); target = ch.pass; info.toast = ch.psay; }
+      else { applyEffects(g, s, ch.fdo); target = ch.fail; info.toast = ch.fsay; }
+    } else { target = ch.goto; info.toast = ch.say; }
+    target = resolveTarget(g, s, target, dec, subs);
+    var hp = s.vars.hp || 0;
+    if (g.onko && hp <= 0) { s.ret = target; target = g.onko; info.hook = target; }
+    else if (g.onheat && ("heat" in s.vars) && s.vars.heat >= g.vars.heat.max) { s.ret = target; target = g.onheat; info.hook = target; }
+    else if (g.onlow) {
+      var thr = g.onlow[0], low = g.onlow[1], charge = g.onlow[2];
+      if (hp < hpBefore && hp >= 1 && hp <= thr && (s.vars[charge] || 0) >= 1) { s.ret = target; target = low; info.hook = target; }
+    }
+    enter(g, s, target);
+    return { state: s, info: info };
+  }
+
+  function Mulberry32(seed) {
+    var a = seed >>> 0;
+    return {
+      next: function () {
+        a = (a + 0x6D2B79F5) >>> 0;
+        var t = Math.imul(a ^ (a >>> 15), 1 | a);
+        t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+      },
+      d6: function () { return Math.floor(this.next() * 6) + 1; },
+      pick: function (opts, w) {
+        var total = w.reduce(function (x, y) { return x + y; }, 0), r = this.next() * total, acc = 0;
+        for (var i = 0; i < opts.length; i++) { acc += w[i]; if (r < acc) return opts[i]; }
+        return opts[opts.length - 1];
+      }
+    };
+  }
+  function rngDecider(rng, typed) {
+    return { choose: function (kind, opts, w) {
+      if (kind === "roll") return rng.d6();
+      if (kind === "table") return rng.pick(opts, w);
+      return typed == null ? "" : typed;
+    } };
+  }
+
+  function autoplay(g, seed, steps, subs) {
+    var rng = Mulberry32(seed), pick = Mulberry32(seed * 7919 + 1), s = newState(g), trace = [];
+    for (var i = 0; i < steps; i++) {
+      var usable = visibleChoices(g, s, !!subs).filter(function (v) { return !v.locked; }).map(function (v) { return v.ch; });
+      if (!usable.length) { trace.push("STUCK@" + s.node); break; }
+      var ch = usable[Math.floor(pick.next() * usable.length)];
+      var typed = (ch.input && i % 2 === 0) ? ch.input : "NOPE";
+      var r = step(g, s, ch, rngDecider(rng, typed), !!subs);
+      s = r.state;
+      trace.push([s.node, r.info.roll || "", r.info.toast || "",
+                  g.varOrder.map(function (k) { return s.vars[k]; }).join(","),
+                  Array.from(s.flags).sort().join(",")].join("|"));
+    }
+    return trace;
+  }
+
+  return { COLS: COLS, MAX_LINES: MAX_LINES, parse: parse, evalCond: evalCond, newState: newState, copy: copy,
+           visibleChoices: visibleChoices, renderText: renderText, step: step, Mulberry32: Mulberry32,
+           rngDecider: rngDecider, autoplay: autoplay };
+})();
+</script>
+
+<!-- ================================================================ UI -->
+<script>
+(function () {
+  "use strict";
+  var $ = function (id) { return document.getElementById(id); };
+  var q = new URLSearchParams(location.search);
+  var SUBS = q.get("sub") === "1";
+  var DEBUG = q.get("debug") === "1";
+  var seedParam = parseInt(q.get("seed"), 10);
+  var SEED = isFinite(seedParam) ? seedParam : Math.floor(Math.random() * 2147483646) + 1;
+  var rng = NS.Mulberry32(SEED);
+  var g, s, rollLine = null, toast = null, note = null, actions = [], pendingChoice = null;
+  var KEY = "nightshift.save";
+  var data = { version: null, slot: null, endings: [] };
+
+  function load() {
+    try {
+      var raw = window.localStorage.getItem(KEY);
+      if (raw) {
+        var d = JSON.parse(raw);
+        if (d && typeof d === "object") data = { version: d.version, slot: d.slot || null, endings: d.endings || [] };
+      }
+    } catch (e) { /* storage blocked: play without saves */ }
+    if (data.version !== g.meta.version) { data.slot = null; data.version = g.meta.version; }
+  }
+  function store() {
+    try { window.localStorage.setItem(KEY, JSON.stringify(data)); return true; }
+    catch (e) { return false; }
+  }
+  function snapshot() {
+    return { node: s.node, vars: Object.assign({}, s.vars), flags: Array.from(s.flags).sort(), lastcp: s.lastcp, ret: s.ret };
+  }
+  function restore(snap) {
+    var n = NS.newState(g);
+    Object.keys(snap.vars || {}).forEach(function (k) { if (k in n.vars) n.vars[k] = snap.vars[k]; });
+    var known = new Set(g.itemOrder.concat(g.flags));
+    (snap.flags || []).forEach(function (f) { if (known.has(f)) n.flags.add(f); });
+    n.lastcp = snap.lastcp || null; n.ret = snap.ret || null;
+    n.node = g.nodes[snap.node] ? snap.node : (g.nodes[n.lastcp] ? n.lastcp : g.start);
+    s = n;
+  }
+
+  function span(cls, txt) { var e = document.createElement("span"); if (cls) e.className = cls; e.textContent = txt; return e; }
+
+  function render() {
+    var node = g.nodes[s.node], st = $("status"), items = $("items");
+    $("tag").textContent = (node.checkpoint ? "CHECKPOINT " : "") + (node.subsOnly ? "SUBS" : "");
+    st.textContent = ""; items.textContent = "";
+    if (s.node === g.start) {
+      st.appendChild(span("dim", "TENANT TERMINAL" + (SUBS ? "  // SUBSCRIBER" : "")));
+    } else {
+      var v = s.vars, heat = "";
+      for (var i = 0; i < g.vars.heat.max; i++) heat += i < v.heat ? "●" : "○";
+      st.appendChild(span(v.hp <= 2 ? "low" : "", "HP " + (v.hp < 10 ? " " : "") + v.hp + "/" + g.vars.hp.max + "  "));
+      st.appendChild(span("amb", "CREDS " + v.creds + "  "));
+      st.appendChild(span("mag", "HEAT " + heat));
+      st.appendChild(document.createTextNode("\n"));
+      st.appendChild(span("dim", g.varOrder.filter(function (k) { return g.vars[k].kind === "skill"; })
+        .map(function (k) { return k + " " + v[k]; }).join("  ")));
+      var inv = g.itemOrder.filter(function (k) { return s.flags.has(k); }).map(function (k) { return g.items[k]; });
+      items.textContent = "ITEMS: " + (inv.length ? inv.join(", ") : "none");
+    }
+    var tx = $("text");
+    tx.className = "";
+    tx.textContent = NS.renderText(g, s, SUBS).join("\n");
+
+    var strip = [];
+    if (rollLine) strip.push(rollLine);
+    if (toast) strip.push(toast);
+    if (note) strip.push(note);
+    if (s.node === g.start) strip.push("ENDINGS FOUND: " + data.endings.length + "/3 " + data.endings.slice().sort().join(" "));
+    $("strip").textContent = strip.join("\n");
+
+    actions = NS.visibleChoices(g, s, SUBS).map(function (v) { return { kind: "choice", ch: v.ch, locked: v.locked }; });
+    if (s.node === g.start && data.slot) actions.unshift({ kind: "continue", label: "Continue (saved at " + data.slot.node + ")" });
+    var ol = $("choices");
+    ol.textContent = "";
+    actions.forEach(function (a, i) {
+      var li = document.createElement("li"), b = document.createElement("button");
+      b.type = "button";
+      if (a.locked) b.className = "locked";
+      b.appendChild(span("n", String(i + 1)));
+      b.appendChild(span("", (a.locked ? "[LOCKED] " : "") + (a.kind === "continue" ? a.label : a.ch.label)));
+      b.addEventListener("click", function () { act(i); });
+      li.appendChild(b); ol.appendChild(li);
+    });
+    $("keys").textContent = "keys 1-" + Math.max(1, actions.length) + " · checkpoints autosave";
+    $("debug").textContent = DEBUG ? "node=" + s.node + " cp=" + s.lastcp + " ret=" + s.ret + " seed=" + SEED + "\n" +
+      g.varOrder.map(function (k) { return k + "=" + s.vars[k]; }).join(" ") + "\nflags: " + (Array.from(s.flags).sort().join(" ") || "-") : "";
+  }
+
+  function act(i) {
+    if (pendingChoice) return;
+    var a = actions[i];
+    if (!a) return;
+    rollLine = null; toast = null; note = null;
+    if (a.kind === "continue") { restore(data.slot); toast = "Welcome back."; render(); return; }
+    if (a.locked) { toast = a.ch.locked || "LOCKED."; render(); return; }
+    if (a.ch.input !== null) { openKeypad(a.ch); return; }
+    commit(a.ch, null);
+  }
+
+  function commit(ch, typed) {
+    var r = NS.step(g, s, ch, NS.rngDecider(rng, typed), SUBS);
+    s = r.state; rollLine = r.info.roll; toast = r.info.toast;
+    if (r.info.inputOk !== null && !toast) toast = r.info.inputOk ? "ACCEPTED." : "WRONG.";
+    var known = new Set(data.endings), grew = false;
+    s.endings.forEach(function (e) { if (!known.has(e)) { data.endings.push(e); grew = true; } });
+    if (grew) store();
+    if (s.cleared) { data.slot = null; store(); }
+    else if (s.saveNow) { data.slot = snapshot(); if (store()) note = "[CHECKPOINT SAVED]"; }
+    render();
+  }
+
+  function openKeypad(ch) {
+    pendingChoice = ch;
+    $("hint").textContent = "KEYPAD // hint: " + (ch.hint || "");
+    $("keypad").hidden = false; $("choices").hidden = true;
+    var c = $("code"); c.value = ""; c.focus();
+  }
+  function closeKeypad() { pendingChoice = null; $("keypad").hidden = true; $("choices").hidden = false; }
+  $("keypad").addEventListener("submit", function (e) {
+    e.preventDefault();
+    var ch = pendingChoice, typed = $("code").value;
+    closeKeypad(); rollLine = null; toast = null; note = null;
+    if (ch) commit(ch, typed);
+  });
+  $("cancel").addEventListener("click", function () { closeKeypad(); render(); });
+  $("wipe").addEventListener("click", function () {
+    if (!confirm("Delete your saved shift and endings on this device?")) return;
+    data = { version: g.meta.version, slot: null, endings: [] };
+    try { window.localStorage.removeItem(KEY); } catch (e) { /* ignore */ }
+    s = NS.newState(g); rollLine = toast = note = null; render();
+  });
+  document.addEventListener("keydown", function (e) {
+    if (pendingChoice) { if (e.key === "Escape") { closeKeypad(); render(); } return; }
+    if (e.altKey || e.ctrlKey || e.metaKey) return;
+    var n = parseInt(e.key, 10);
+    if (n >= 1 && n <= actions.length) { e.preventDefault(); act(n - 1); }
+  });
+
+  // size the font so the 50-column frame (46 text cols + padding) fits the screen,
+  // whatever monospace font actually loaded
+  function fit() {
+    var probe = document.createElement("span");
+    probe.textContent = "0000000000000000000000000000000000000000000000000000";
+    probe.style.cssText = "position:absolute;visibility:hidden;white-space:pre;font:inherit;";
+    document.body.appendChild(probe);
+    var w = probe.getBoundingClientRect().width / 52;          // one column
+    probe.remove();
+    var cur = parseFloat(getComputedStyle(document.body).fontSize);
+    var avail = Math.min(document.documentElement.clientWidth - 32, 900);
+    var fs = Math.max(8, Math.min(17, cur * (avail / 50) / w));
+    document.body.style.fontSize = fs.toFixed(2) + "px";
+  }
+  fit();
+  window.addEventListener("resize", fit);
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(fit);
+
+  fetch("nightshift.txt", { cache: "no-cache" })
+    .then(function (r) { if (!r.ok) throw new Error("HTTP " + r.status); return r.text(); })
+    .then(function (src) {
+      g = NS.parse(src);
+      if (g.errors.length) throw new Error("data errors: " + g.errors.slice(0, 3).map(function (e) { return "line " + e[0] + " " + e[1]; }).join("; "));
+      s = NS.newState(g);
+      load();
+      render();
+    })
+    .catch(function (err) {
+      $("text").textContent = "NO SIGNAL.\nCould not load nightshift.txt\n(" + err.message + ")\n\nOpen this page from a web server,\nnot straight from the disk.";
+    });
+})();
+</script>
+</body>
+</html>
