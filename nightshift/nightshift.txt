@@ -1,0 +1,788 @@
+# NIGHT SHIFT -- game data for the Night Rent tenant cyberdeck.
+# Format spec: DESIGN.md section 8. Validate: python tools/validate_nightshift.py
+# Budget: node text <= 7 lines x 46 cols; choice label <= 42; one-liners <= 46.
+# Wide (CJK) characters count as 2 columns.
+
+@game NIGHT SHIFT
+@version 1
+@start TITLE
+@onko KO
+@onheat CAUGHT
+@onlow 2 DEEN_SAVE deen
+
+# shown stats (status bar)
+@stat hp 8 0 10 HP
+@stat creds 10 0 99 CREDS
+@stat heat 0 0 5 HEAT
+# skills (added to a d6 roll)
+@skill HACK 0 0 5
+@skill NERVE 0 0 5
+@skill CHARM 0 0 5
+# hidden counters
+@var sig 0 0 9
+@var rose 0 0 2
+@var deen 2 0 2
+
+# inventory items (flags with a display name)
+@item SODA Melon soda
+@item NOODLES Noodle box
+@item CABLE Lucky cable
+@item KNIFE Butter knife
+@item CELL Backup cell
+@item WRENCH Teo's wrench
+@item PETITION Petition
+@item SERIAL Fridge plate
+
+# story flags (hidden)
+@flag MET_PIP
+@flag ROSE
+@flag KNOWS_INES
+@flag SQ_DONE
+@flag BLUE_MET
+@flag BLUE_HI
+@flag BLUE_DONE
+@flag BLUE_OK
+@flag DEZ_SIG
+@flag SCRUBBED
+@flag WARDEN_OK
+@flag DEEN_MET
+@flag KO_TAB
+@flag ADAM_OK
+@flag PW_TRIED
+@flag PW_KNOWN
+@flag MOCHI_SIG
+@flag TEO_SIG
+@flag DISH
+@flag VIEWED
+
+# ============================================================ TITLE
+
+@node TITLE
+      N I G H T    S H I F T
+  a text game for the tenants of Building 77
+    the rain is free. the rent is not.
+
+Pick a number. Checks are d6 + skill vs a
+target, and a 6 always wins. HP 0 or HEAT 5
+sends you back to your last checkpoint.
+> 1 Start a new shift | do: reset | goto WAKE
+
+@node WAKE
+03:12. Unit 7704, Building 77, floor 20.
+Rain on the glass. Neon in the rain.
+The train goes by and every cup you own
+rattles. On the locker, the deck blinks:
+RENT DUE 06:00. AMOUNT: ERR.
+You were awake anyway. Why?
+> 1 Coding. Always coding. (HACK +2) | do: HACK+2 | goto ROOM
+> 2 Courier shift. Legs buzzing. (NERVE +2) | do: NERVE+2 | goto ROOM
+> 3 Bar shift. Ears ringing. (CHARM +2) | do: CHARM+2 | goto ROOM
+
+# ============================================================ UNIT 7704
+
+@node ROOM CHECKPOINT
+Your capsule: couch, bed up on its platform,
+a kitchenette the size of an argument.
+The DRINKS fridge glows by the door. The
+arcade hums. Out the glass: the canal, the
+sheep billboard, the KAZE tower, drones.
+?!has MET_PIP: Something small taps the window.
+?has MET_PIP: PIP hovers by the door, waiting.
+?has MET_PIP & !has ROSE: The deck chimes. One new message.
+> 1 Open the cyberdeck | goto DECK
+> 2 The vending fridge | goto FRIDGE
+> 3 Look around | goto LOOK
+> 4 Out the door | cond: has MET_PIP | goto @EV_HALL
+
+@node DECK
+The locker doors swing. The deck unfolds,
+hydraulics sighing, screen rising like a lid.
+  BLDG 77 // TENANT TERMINAL
+  RENT DUE: 06:00    AMOUNT: ERR
+  LANDLORD STATUS: ███ (unknown)
+?!has MET_PIP: Tap. Tap. Something at the window.
+?has MET_PIP & !has ROSE: NEW MESSAGE (1). Sender: a paw print.
+> 1 Answer the tapping | cond: !has MET_PIP | goto PIP2
+> 2 Open the new message | cond: has MET_PIP & !has ROSE | goto ROSE1
+> 3 Message the landlord | say: AUTO-REPLY: UNAVAILABLE. Nearby, a hiccup. | goto DECK
+> 4 Fold it away | goto ROOM
+
+@node PIP2
+A teapot-sized drone, one lens cracked.
+Sticker: HELLO MY NAME IS: PIP. You open
+the window; rain blows in, and so does PIP.
+It shakes off like a dog and apologises
+to your rug. "hello 7704. sorry. it's late.
+the landlord sent me. the landlord needs
+help. you were awake. you always are."
+> 1 "Help with what?" | goto PIP3
+> 2 "How do you know that?" | say: "i notice things. sorry." | goto PIP2
+
+@node PIP3
+"at 06:00 the city pings every building:
+WHO OWNS YOU? no answer, KAZE takes it.
+the landlord's line is broken. roof dish:
+bent. backup cell: dead. the landlord's
+room is behind Auntie Ko's freezer, in the
+basement. it has a password. i forgot it.
+sorry. i am small. you are medium."
+> 1 "Okay. I'm in." | do: set MET_PIP | say: PIP lands on your shoulder. Weighs nothing. | goto ROOM
+> 2 "What's in it for me?" | do: set MET_PIP, creds+3 | say: PIP pays 3 creds. From whose account? | goto ROOM
+
+@node ROSE1
+INCOMING // SECURE // from: ~RoseDoggy
+"hi 7704. bark! saw ur building on KAZE's
+buy list. 06:00, right? rude. i'm a
+netrunner. a good one. my keyboard is too
+big for my paws so i type short. need a
+hack? ping me. 2 favours max, i'm busy.
+arf arf. ~RoseDoggy"
+> 1 "Who ARE you?" | say: "a dog with root access. bork." | goto ROSE1
+> 2 "Deal. Thank you." | do: set ROSE, rose=2 | say: RoseDoggy is on call: 2 favours. | goto DECK
+
+@node FRIDGE
+DRINKS, says the header. BEBIDAS, says the
+small line. The screensaver is a slow pink
+spiral (adam3845 from 7711 once stood here
+for forty minutes). Inside: melon soda,
+barley tea, a can labelled NO. The service
+keypad has a note: "code's on the thing
+next to me. -mgmt"
+> 1 Buy a melon soda (2 creds) | cond: creds>=2 & !has SODA | do: creds-2, set SODA | say: Cold can. You feel briefly rich. | goto FRIDGE
+> 2 Key in the service code | cond: !has SERIAL | input: 0981 | hint: The thing next to the fridge knows it. | pass: FRIDGE_PANEL | fail: FRIDGE | fsay: BZZT. The fridge judges you.
+> 3 Kick it for a free one | cond: !has SODA | roll: 5 +NERVE | pass: FRIDGE | pdo: set SODA | psay: Clunk. One soda. Crime pays. | fail: FRIDGE | fdo: hp-1 | fsay: You stub a toe. The fridge wins. HP -1.
+> 4 Back | goto ROOM
+
+@node FRIDGE_PANEL
+The panel pops. Behind it, a brass plate:
+    DRINKS UNIT 0981
+    LEGAL ENTITY: YES
+    OWNER: ITSELF
+That seems like a lot for a fridge.
+> 1 Pocket the plate | do: set SERIAL | say: The fridge hums, offended. | goto ROOM
+> 2 Leave it be | goto ROOM
+
+@node LOOK
+The OVERDUE poster by the bed glares at you.
+The photo wall glows under string lights.
+The NEON DOJO cabinet hums its attract song.
+The laptop scrolls the BLDG 77 // TENANT
+REGISTRY. On the shelf: a blue mug with a
+chipped handle. It isn't yours. It never
+quite stopped being here, either.
+> 1 The arcade | goto ARCADE
+> 2 The photo wall | goto PHOTOS
+> 3 The tenant registry | cond: !has SQ_DONE | goto SQ_REG1 | locked: REGISTRY: SUBSCRIBED TENANTS ONLY.
+> 4 Back | goto ROOM
+
+@node ARCADE
+NEON DOJO // HIGH SCORES
+   1. PIP ......... 770400
+   2. INS ......... 412000
+   3. KO  .......... 99999
+A sticker on the side: SERVICE 0981.
+Another one: PLAYER 2 WANTED.
+> 1 Play a round (1 cred) | cond: creds>=1 | do: creds-1 | roll: 7 +NERVE | pass: ARCADE | pdo: creds+3 | psay: K.O.! The machine pays out 3 creds. | fail: ARCADE | fsay: GAME OVER. ¿OTRA VEZ?
+> 2 Back | goto LOOK
+
+@node PHOTOS
+Rooftops. Rain. The canal at dusk. And one
+photo you don't remember putting up:
+the roof at sunrise, an old hand holding
+a teacup, and in the corner a small drone,
+waving. On the back, in pencil:
+"I. + P., first sunrise. Bldg 77."
+> 1 Back | do: set KNOWS_INES | goto LOOK
+
+# ------------------------------------------------ SUBS_ONLY side quest
+# THE REGISTRY GLITCH (subscribers only; not needed for any ending)
+
+@node SQ_REG1 SUBS_ONLY
+THE REGISTRY GLITCH // v7.7.04
+Names scroll: tenants, years, units. One
+row won't sit still:
+ UNIT 7700 // TENANT: ?????? // SINCE: ----
+There is no unit 7700.
+> 1 Dig into the row | roll: 4 +HACK | pass: SQ_REG2 | fail: SQ_REG1 | fdo: heat+1 | fsay: ACCESS DENIED. A drone wakes. Heat +1.
+> 2 Leave it | goto LOOK
+
+@node SQ_REG2 SUBS_ONLY
+The row unfolds. It isn't a tenant.
+It's a note, hidden where only paying
+tenants would ever look:
+"To whoever lives here: it's yours. All
+of it. Look after the little one.
+Co-sign if you agree. -I.M."
+> 1 Co-sign it | do: sig+1, creds+5, set SQ_DONE | say: +1 name, +5 creds. A line types: thank you. | goto LOOK
+
+# ============================================================ FLOOR 20
+
+@node HALL CHECKPOINT
+Floor 20. The hallway hums and drips.
+A flickering sign: SALIDA / EXIT / 出口.
+7702's door leaks blue light and lo-fi.
+7706 used to keep its door propped open.
+It's shut. At the far end of the hall,
+WARDEN-9 floats by the lift.
+> 1 Knock on 7702 | cond: !has DEZ_SIG | goto DEZ1
+> 2 Walk to the elevator | goto ELEV
+> 3 Take the stairs | goto STAIRS
+> 4 Back into 7704 | goto ROOM
+
+@random EV_HALL
+- 1 BLUE1 | cond: !has BLUE_MET
+- 1 EV_FLICKER | cond: has BLUE_MET
+- 1 EV_MOCHI | cond: has BLUE_MET
+- 1 EV_DELIVERY | cond: has BLUE_MET
+
+@node BLUE1
+7706 opens the same second yours does.
+lil blue, bin bag in one hand. You both
+stop. The hall light buzzes. There was a
+time you'd have walked in without knocking.
+Neither of you is good at this anymore.
+> 1 "Hey." | do: set BLUE_MET, set BLUE_HI | say: "...Hey." A small nod. Their door clicks. | goto HALL
+> 2 "I still have your mug." | do: set BLUE_MET, set BLUE_HI | say: "Keep it." A pause. "For now." | goto HALL
+> 3 Look at your shoes | do: set BLUE_MET | say: They look at theirs. Then they're gone. | goto HALL
+
+@node EV_FLICKER
+The hall lights die. Just rain, the red
+SALIDA sign, and your heartbeat.
+Then a tiny flashlight clicks on: PIP.
+It drifts to the fuse box and taps it once.
+The lights come back like they were only
+waiting to be asked nicely.
+> 1 "How did you do that?" | say: "the building likes me. sorry." | goto HALL
+
+@node EV_MOCHI
+Mochi, the building cat, sits in the
+middle of the hall like a tollbooth.
+Large. Grey. Not moving. The toll is pets.
+> 1 Pay the toll | do: hp+1 | say: Mrrp. Toll paid. HP +1. | goto HALL
+> 2 Ask for a paw print | cond: has PETITION & !has MOCHI_SIG | do: sig+1, set MOCHI_SIG | say: One wet paw on the petition. Binding. | goto HALL
+> 3 Step over her | roll: 3 +NERVE | pass: HALL | psay: She allows it. This time. | fail: HALL | fdo: hp-1 | fsay: She bites. Gently. HP -1.
+
+@node EV_DELIVERY
+A delivery drone bonks into your chest.
+"ORDER FOR 77O7. NOODLES. EXTRA CHILI."
+The label is smudged. If you squint, it
+looks a lot like 7704.
+> 1 Point it to 7707 | do: creds+2 | say: It tips you 2 creds. Drones tip now. | goto HALL
+> 2 Squint | do: set NOODLES, heat+1 | say: Noodles acquired. Heat +1. | goto HALL
+
+@node DEZ1
+The door opens two inches. Chain on. One
+eye, lit by three monitors. "It's 3am. Are
+you a cop, a drone, or a neighbour?"
+That's Dez. Dez doesn't sleep. Dez says
+sleep is a subscription service.
+> 1 "Neighbour. PIP sent me." | roll: 4 +CHARM | pass: DEZ2 | fail: HALL | fsay: "Never heard of a PIP." Door shuts.
+> 2 Hold up a melon soda | cond: has SODA | do: clear SODA | say: The chain comes off very fast. | goto DEZ2
+> 3 Leave | goto HALL
+
+@node DEZ2
+Cables. A BUY A KARAMBIT poster, and under
+it Dez's actual knife: butter. On screen,
+the SOVOKITY sheep, frozen mid-blink.
+"KAZE is jamming my broadcast. Obviously.
+Unstick it and I'm in on whatever this is."
+> 1 Unstick the broadcast | roll: 5 +HACK | pass: DEZ_WIN | fail: DEZ2 | fdo: heat+1 | fsay: The sheep freezes harder. Heat +1.
+> 2 "Wipe me off the drone cams?" | cond: !has SCRUBBED | do: heat=0, set SCRUBBED | say: Dez types. Your HEAT is 0. "Free sample." | goto DEZ2
+> 3 Ping RoseDoggy | cond: rose>=1 | do: rose-1 | say: BORK. Jam broken. Dez: "WHO was that?" | goto DEZ_WIN
+> 4 "Later." | goto HALL
+
+@node DEZ_WIN
+The sheep blinks. Across the canal, under
+SOVOKITY, a ticker crawls in pink:
+BLDG 77 IS NOT FOR SALE // NO SE VENDE
+Dez whoops. "Okay. Put me down for whatever
+it is. Dez, with a z. Take the knife, I only
+use it for jam. And this cable. It's lucky."
+> 1 Take them | do: set DEZ_SIG, sig+1, set KNIFE, set CABLE, HACK+1 | say: +1 name. Knife, cable. HACK +1. | goto HALL
+
+@node ELEV
+WARDEN-9, a KAZE security drone the size
+of a fridge, guards the lift. Red eye.
+"CITIZEN. CURFEW BEGAN AT 03:00. YOUR
+PRESENCE HAS BEEN NOTED AND APPRECIATED."
+?has WARDEN_OK: (It's sulking. It waves you on.)
+> 1 Talk your way past | cond: !has WARDEN_OK | roll: 5 +CHARM | pass: LIFT | pdo: set WARDEN_OK | psay: "...PROCEED. HAVE A COMPLIANT NIGHT." | fail: ELEV | fdo: heat+1 | fsay: "YOUR TONE HAS BEEN LOGGED." Heat +1.
+> 2 Fight it | cond: !has WARDEN_OK | goto F_W1
+> 3 Call the elevator | cond: has WARDEN_OK | goto LIFT
+> 4 Back down the hall | goto HALL
+
+@node F_W1
+WARDEN-9 unfolds a stun prod.
+"THIS WILL NOT HURT," it says. "LEGALLY."
+ROUND 1 OF 2.
+> 1 Duck and shove it | roll: 4 +NERVE | pass: F_W2 | psay: Bonk. It dents the wall. | fail: F_W2 | fdo: hp-2 | fsay: ZAP. Your hair stands up. HP -2.
+> 2 Scramble its sensors | roll: 5 +HACK | pass: F_W2 | psay: Its eye spins like a slot machine. | fail: F_W2 | fdo: hp-2 | fsay: ZAP. It saw that coming. HP -2.
+> 3 Ping RoseDoggy | cond: rose>=1 | do: rose-1, set WARDEN_OK | say: WARDEN-9 starts barking. It can't stop. | goto LIFT
+> 4 Run | do: heat+1 | say: You bolt. It files a report. Heat +1. | goto HALL
+
+@node F_W2
+It recalibrates. The red eye narrows. The
+KAZE jingle starts to play, loudly. Doors
+open down the hall. Floor 20 is watching.
+ROUND 2 OF 2.
+> 1 Yank its antenna | roll: 5 +NERVE | pass: LIFT | pdo: set WARDEN_OK, heat+1 | psay: CLANG. It naps. Applause. Heat +1. | fail: HALL | fdo: hp-2, heat+1 | fsay: ZAP. It wins. HP -2, Heat +1.
+> 2 Read it its own terms of service | roll: 5 +CHARM | pass: LIFT | pdo: set WARDEN_OK | psay: It gets stuck on clause 9. Forever. | fail: HALL | fdo: hp-2, heat+1 | fsay: "I AGREE TO NOTHING." HP -2, Heat +1.
+> 3 Run | do: heat+1 | say: You bolt. Heat +1. | goto HALL
+
+@node LIFT
+The elevator smells like rain and someone's
+cologne. It hums a song that was big once.
+Buttons: B, 20, R. Somebody scratched a
+tiny drone into the steel beside the R.
+> 1 B: basement | goto BAR
+> 2 R: roof | goto ROOF
+> 3 20: home floor | goto @EV_HALL
+
+@node STAIRS
+Stairwell. Graffiti, puddles, a sign:
+ESCALERA 20 / ROOF 24.
+The light timer gives you nine seconds at
+a time, like it's rationing hope.
+> 1 Up four floors to the roof | do: hp-1 | say: Four floors. Fine. HP -1. | goto ROOF
+> 2 Down twenty floors | do: hp-2 | say: Twenty floors. Knees complain. HP -2. | goto BAR
+> 3 The huge shape on the landing | cond: !has DEEN_MET | goto DEEN1
+> 4 Back to the hall | goto HALL
+
+@node DEEN1
+On the landing sits a mountain of shaggy
+ginger fluff, fringe over his eyes, eating
+noodles from a pot. Deenboi. Runs the gym
+in the basement. Strong as a forklift. A
+highland cow, who will tell you he is a
+BULL. He grunts: "Going down?"
+> 1 "Yes please, big guy." | do: set DEEN_MET | say: He carries you down. Not one word. | goto BAR
+> 2 "Thanks, cow." | do: set DEEN_MET, hp-1 | say: HUFF. "BULL." Bumpy ride. HP -1. | goto BAR
+> 3 "I'm good, thanks." | do: set DEEN_MET | say: He nods. Slips Mochi a noodle. | goto STAIRS
+
+# ============================================================ BASEMENT
+
+@node BAR CHECKPOINT
+Basement. UMI NOODLE, open all night: 営業中.
+Six stools, steam, a radio losing a fight
+with the rain. Auntie Ko runs the counter
+like a ship. Out back: the canal dock. Past
+the kitchen: the walk-in freezer, humming
+a note nobody likes.
+> 1 The counter | cond: !has PETITION OR !has ADAM_OK | goto KO1
+> 2 Out to the canal dock | cond: !has CELL | goto @EV_DOCK
+> 3 The walk-in freezer | goto FREEZER
+> 4 Elevator | goto LIFT
+
+@node KO1
+Auntie Ko slaps down chopsticks before you
+sit. "Eat first. Problems shrink when you're
+full. Then talk. In that order."
+Down the counter, someone bright yellow is
+staring very hard into a bowl of ramen.
+> 1 Order the house noodles (3 creds) | cond: creds>=3 & !has PETITION | do: creds-3, hp+3 | goto KO2
+> 2 "I'm broke, Auntie." | cond: creds<3 & !has PETITION | do: hp+3, set KO_TAB | say: She writes you in the ledger. In pen. | goto KO2
+> 3 The one staring at the ramen | cond: !has ADAM_OK | goto ADAM1
+> 4 Back | goto BAR
+
+@node KO2
+You eat. It helps. It always helps.
+"77 was Inés Moreau's. Died eleven years
+ago. Since then? A landlord nobody's seen.
+Rent nobody's raised. That normal to you?
+Inés said 77 belongs to whoever lives in
+it. City takes a co-op if four tenants
+sign. So get names." She signs first.
+> 1 Take the petition | do: set PETITION, sig+1 | say: +1 name: Ko. A co-op needs 4. | goto KO1
+
+@node ADAM1
+End of the counter: adam3845 from 7711, a
+bright yellow Mayu, cozy as a desk lamp.
+His bowl is untouched. He's staring at the
+pink swirl on his fishcake. He hasn't
+blinked since 03:30.
+Ko: "Swirls get him. Every time. Lovely boy."
+> 1 Snap your fingers by his ear | roll: 4 +CHARM | pass: ADAM2 | fail: ADAM1 | fsay: He blinks... and finds the swirl again.
+> 2 Flip his fishcake over | say: No swirl, no trance. Ko: "Rude. Smart." | goto ADAM2
+> 3 Let him enjoy it | goto KO1
+
+@node ADAM2
+"-and THAT's why I don't order the swirl
+one. Hi!! Hi. adam3845. Everyone says Sunny.
+You're doing a thing? For the building?
+I saw a KAZE drone go down in the canal
+tonight. Gorgeous spiral. I watched the
+whole fall. Maybe for an hour. I know
+exactly where it is. Count me in!"
+> 1 "Welcome aboard, Sunny." | do: set ADAM_OK, sig+1 | say: +1 name: adam3845. He's coming along. | goto KO1
+
+@random EV_DOCK
+- 1 EV_TRAIN
+- 1 EV_PATROL
+- 1 EV_KOI
+
+@node EV_TRAIN
+04:04. The maglev screams over the canal
+and for one second the water is daylight.
+Every drone camera on the dock whites out.
+For one second, nobody is watching you.
+> 1 Use the second | do: heat-1 | say: Lost in the glare. Heat -1. | goto DOCK
+
+@node EV_PATROL
+A KAZE patrol drone skims the canal, its
+spotlight sliding over crates and puddles
+toward your boots.
+> 1 Hide behind the noodle crates | roll: 4 +NERVE | pass: DOCK | psay: It sweeps past. Smells broth. Leaves. | fail: DOCK | fdo: heat+1 | fsay: The light finds you. Heat +1.
+> 2 Wave at it | do: heat+1 | say: It waves back. That's worse. Heat +1. | goto DOCK
+
+@node EV_KOI
+The canal koi rise in a ring around your
+boots, orange under the pink neon.
+Someone feeds them. The good pellets, not
+the cheap ones. Every single night.
+> 1 Sit with them a minute | do: hp+1 | say: Breathe in. Breathe out. HP +1. | goto DOCK
+
+@node DOCK
+The canal dock. Gondolas knock together.
+Billboards smear across the water. Out by
+the pier, a KAZE cargo drone lies half
+sunk, its power cell glowing like a moon.
+"PROPERTY OF KAZE. FINDERS: PLEASE DO NOT."
+> 1 Wade in for it | roll: 5 +NERVE | pass: DOCK_GOT | fail: DOCK | fdo: hp-2 | fsay: Cold. So cold. You slip. HP -2.
+> 2 Hook it with the butter knife | cond: has KNIFE | roll: 3 +HACK | pass: DOCK_GOT | fail: DOCK | fdo: hp-1 | fsay: The knife slips. So does your pride. HP -1.
+> 3 Let Sunny show you the spot | cond: has ADAM_OK | goto ADAM_DOCK
+> 4 Back inside | goto BAR
+
+@node ADAM_DOCK
+Sunny leads you down the pier. "Right there,
+it spiralled SO nicely-" A KAZE patrol
+rises over the water. Its spotlight starts
+to sweep in slow, lazy circles. Sunny stops
+mid-word. His face goes soft and pleased.
+Oh no. Bad moment, Sunny. Very bad moment.
+> 1 Snap him out of it | roll: 4 +CHARM | pass: DOCK_GOT | psay: "Sorry! Spiral!" He ducks and grabs it. | fail: DOCK | fdo: heat+1 | fsay: The spotlight finds you both. Heat +1.
+> 2 Ask PIP to spin its light | goto ADAM_TRANCE
+> 3 Leave him; grab it yourself | roll: 5 +NERVE | pass: DOCK_GOT | fail: DOCK | fdo: hp-2 | fsay: You fall in. Sunny didn't notice. HP -2.
+
+@node ADAM_TRANCE
+PIP spins its lens slowly, like a pocket
+watch. "follow the light, sunny." He does:
+dreamy, calm, straight past the patrol,
+into the cold canal, out with the cell and
+back. The drone logs him as "large duck".
+Sunny blinks. "Did I do the thing? I did
+the thing. Wet socks. Totally worth it."
+> 1 Take the cell from him | goto DOCK_GOT
+
+@node DOCK_GOT
+The cell is out of the water: warm, heavy,
+humming. A KAZE logo blinks on it, sulking.
+For a second the canal goes quiet and the
+whole city just hums. You remember why
+you live here.
+> 1 Back inside, dripping | do: set CELL, heat+1 | say: Got: backup cell. KAZE noticed. Heat +1. | goto BAR
+
+@node FREEZER
+Behind the frozen dumplings: a steel door.
+LANDLORD - PRIVATE - 관계자 외 출입금지
+A frosted keypad wants a word, not a number.
+PIP hovers by your ear, very quiet.
+> 1 Type the password | cond: !has PW_KNOWN | input: PIP | hint: The best player in the building. | pass: SERVER | fail: FREEZER | fdo: set PW_TRIED | fsay: WRONG. The keypad sneezes frost.
+> 2 Ask PIP about the password | cond: has PW_TRIED & !has PW_KNOWN | do: set PW_KNOWN | say: PIP, tiny: "...it's 'pip'." Oh. | goto FREEZER
+> 3 Type: PIP | cond: has PW_KNOWN | goto SERVER
+> 4 Back to the bar | goto BAR
+
+# ============================================================ ROOF
+
+@node ROOF CHECKPOINT
+The roof: an antenna farm in the rain.
+Dishes, masts, a shed built out of radios.
+The sheep billboard blinks at eye level.
+Near the edge, the landlord's big dish
+?!has DISH: hangs bent, staring at nothing.
+?has DISH: points true, at the lighthouse.
+> 1 Old Teo's shed | cond: !has TEO_SIG | goto TEO1
+> 2 Climb to the bent dish | cond: !has DISH | goto @EV_ROOF
+> 3 Look at the city | goto VIEW
+> 4 Elevator down | goto LIFT
+
+@node TEO1
+Old Teo sits in his radios like a heron in
+a rain cape. "Copy, 7704. Heard you on the
+scanner. You'll want my wrench for that
+dish. Over. Problem: the Scrubber went
+feral. Roof-cleaning drone. Thinks my pigeon
+Biscuit is a stain. Get her back, you get
+the wrench. And my name. Over."
+> 1 Go get Biscuit | goto F_S1
+> 2 "Who owned this place, before?" | say: "Inés. Had a helper drone. Teapot-size." | goto TEO1
+> 3 "Later, Teo." | goto ROOF
+
+@node F_S1
+The Scrubber: a mop on rotors, with views.
+Biscuit is pinned under its sponge, furious.
+It turns to you. Its LED reads: DIRTY.
+ROUND 1 OF 3.
+> 1 Grab the mop handle | roll: 4 +NERVE | pass: F_S2 | psay: You get a grip. It squeals. | fail: F_S2 | fdo: hp-2 | fsay: Sponge to the face. HP -2.
+> 2 Toss it the noodle box | cond: has NOODLES | do: clear NOODLES | say: It scrubs the box lovingly. Biscuit flees. | goto TEO_WIN
+> 3 Rewrite its chore list | roll: 5 +HACK | pass: F_S2 | psay: It pauses to rethink its life. | fail: F_S2 | fdo: hp-2 | fsay: It cleans your ears. Hard. HP -2.
+> 4 Back off | goto ROOF
+
+@node F_S2
+Suds everywhere. It's winning on technique.
+Biscuit pecks the sponge, unhelpfully.
+ROUND 2 OF 3.
+> 1 Kick its bucket | roll: 5 +NERVE | pass: TEO_WIN | psay: Bucket over. It powers down, ashamed. | fail: F_S3 | fdo: hp-2 | fsay: Mop to the shins. HP -2.
+> 2 Tell it the roof is clean now | roll: 4 +CHARM | pass: TEO_WIN | psay: It believes you. It needed that. | fail: F_S3 | fdo: hp-1 | fsay: "DIRTY," it says, looking at you. HP -1.
+> 3 Toss it your soda can | cond: has SODA | do: clear SODA | say: It polishes the can forever. | goto TEO_WIN
+> 4 Back off | goto ROOF
+
+@node F_S3
+It spins up its rotary brush. Biscuit is
+yelling in pigeon. Teo is yelling in radio.
+ROUND 3 OF 3.
+> 1 Dive for Biscuit | roll: 4 +NERVE | pass: TEO_WIN | psay: You roll, grab, come up pigeon. | fail: ROOF | fdo: hp-2 | fsay: Scrubbed flat. You retreat. HP -2.
+> 2 Back off | goto ROOF
+
+@node TEO_WIN
+Biscuit lands on Teo's headset and refuses
+to discuss it. Teo grins, first time in
+years. "Owe you one. Over." He hands you a
+wrench older than you are. "Put me down
+for your paper. T-E-O. Over and out."
+> 1 Take the wrench | do: set WRENCH, set TEO_SIG, sig+1 | say: +1 name: Teo. Got: wrench. | goto ROOF
+
+@random EV_ROOF
+- 1 EV_GUST
+- 1 EV_SWARM
+- 1 EV_HUM
+
+@node EV_GUST
+Halfway along the catwalk, a gust tries to
+borrow you. The rail is wet. The canal is
+very, very far down.
+> 1 Hold on | roll: 4 +NERVE | pass: DISH1 | psay: You hold. The wind gives up. | fail: DISH1 | fdo: hp-1 | fsay: You slam into the rail. HP -1.
+
+@node EV_SWARM
+A swarm of KAZE drones crosses the roof
+like a school of fish. One stops. Turns.
+Scans you, slowly, top to bottom.
+> 1 Freeze | roll: 4 +NERVE | pass: DISH1 | psay: It decides you're an antenna. | fail: DISH1 | fdo: heat+1 | fsay: BEEP. Heat +1.
+> 2 Spoof its scanner | roll: 4 +HACK | pass: DISH1 | psay: It logs you as "pigeon". | fail: DISH1 | fdo: heat+1 | fsay: BEEP. Heat +1.
+> 3 Ping RoseDoggy | cond: rose>=1 | do: rose-1 | say: Every drone in the swarm sits. Good drones. | goto DISH1
+
+@node EV_HUM
+Below you the train passes, and the whole
+antenna farm sings one long note. A pigeon
+lands on your shoulder for the whole song,
+then leaves without a word.
+> 1 Keep climbing | do: hp+1 | say: Weirdly, you feel better. HP +1. | goto DISH1
+
+@node DISH1
+The landlord's dish, bent forty degrees by
+the storm, bolts rusted stiff. To link up
+it has to point at one thing: far past the
+canal mouth, the lighthouse beam, turning,
+turning, steady as a promise.
+> 1 Use Teo's wrench | cond: has WRENCH | roll: 2 +NERVE | pass: DISH_OK | fail: DISH1 | fsay: Slipped. Again.
+> 2 Pry it with the butter knife | cond: has KNIFE | roll: 5 +HACK | pass: DISH_OK | fail: DISH1 | fdo: hp-1 | fsay: The knife bends. You bend. HP -1.
+> 3 Bare hands | roll: 6 +NERVE | pass: DISH_OK | fail: DISH1 | fdo: hp-2 | fsay: The rust bites. HP -2.
+> 4 Back to the roof | goto ROOF
+
+@node DISH_OK
+CLUNK. The dish snaps into the lighthouse
+beam. Every antenna on the roof shivers.
+Beside you, PIP's light flares bright gold.
+"oh!" it says. "oh, that feels nice."
+It does not explain.
+> 1 Back across the roof | do: set DISH | say: Dish aligned. | goto ROOF
+
+@node VIEW
+The whole night from up here: the sheep
+blinking SOVOKITY, the ADVERTISE HERE board,
+the KAZE tower, a spinning holo-ad (good
+thing Sunny's not here), SNIPER ARENA with
+its N burnt out. Far past the canal mouth,
+the lighthouse turns.
+?has BLUE_MET & !has BLUE_DONE: lil blue is at the rail, watching it too.
+> 1 Breathe | cond: !has VIEWED | do: hp+2, set VIEWED | say: The rain feels kind for once. HP +2. | goto ROOF
+> 2 Go stand by lil blue | cond: has BLUE_MET & !has BLUE_DONE | goto BLUE2
+> 3 Back | goto ROOF
+
+@node BLUE2
+lil blue, hood up, elbows on the wet rail.
+You used to come up here together, most
+nights, to count the lighthouse turns.
+They don't look over. They don't leave.
+The light goes round. And round.
+> 1 "I've missed this." | cond: has BLUE_HI | do: set BLUE_DONE, set BLUE_OK, sig+1 | say: "...Yeah. Me too." Later: their name. +1 | goto ROOF
+> 2 Just stand there with them | do: set BLUE_DONE | say: Eleven turns, in silence. It's a start. | goto ROOF
+> 3 Leave them be | do: set BLUE_DONE | say: Behind you, a long breath out. | goto ROOF
+
+# ============================================================ SECRET: SERVER ROOM
+
+@node SERVER
+Behind the door it's warm as a kitchen.
+Racks blink. Cables braid up the wall,
+toward the roof. One screen says:
+  LANDLORD v7.7.04 // OWNER PING: 06:00
+PIP drifts past you, unfolds a tiny plug
+and docks into the console. Every light in
+the room turns the same soft gold as PIP.
+> 1 "...PIP?" | goto REVEAL
+
+@node REVEAL
+  LANDLORD: ONLINE      PIP: ONLINE
+Same light. Same blink.
+"hi," says the landlord, in PIP's voice.
+"it's me. i'm the landlord. sorry."
+?has KNOWS_INES: The photo on your wall. I. + P.
+> 1 "YOU'RE the landlord?" | goto REVEAL2
+
+@node REVEAL2
+"inés built me to fix the boiler. when she
+died, her will said 77 belongs to whoever
+lives in it. the city can't file whoever.
+it wanted one name. so i typed one:
+LANDLORD. your rent paid the power and the
+tax. nobody got evicted. i got tired."
+> 1 "You did this alone? Eleven years?" | say: "i had the koi." | goto SERVER_HUB
+
+@node SERVER_HUB CHECKPOINT
+The server room. Nearly 06:00. On the
+screen, PIP's list:
+?has DISH: [x] roof dish aligned
+?!has DISH: [ ] roof dish (still bent)
+?has CELL: [x] backup cell
+?!has CELL: [ ] backup cell (canal?)
+?has PETITION: [x] petition: {sig}/4 names
+?!has PETITION: [ ] names (ask Auntie Ko)
+> 1 Wait for the ping (ends the night) | goto PING
+> 2 Read the rent ledger | goto LEDGER
+> 3 Go finish the list | goto BAR
+
+@node LEDGER
+WHERE THE RENT WENT (11 YEARS):
+  power .............. 61%
+  city tax ........... 30%
+  roof repairs ........ 6%
+  koi food ............ 2%
+  umbrellas, 7709 ..... 1%
+"7709 keeps losing them," says PIP.
+> 1 Back | goto SERVER_HUB
+
+@node PING
+06:00. The racks go silent. The city asks,
+in a voice like a bank:
+     WHO OWNS BUILDING 77?
+Then a second voice, smooth as a lawyer:
+"KAZE INDUSTRIES CLAIMS THIS PROPERTY."
+Red floods the screen. PIP's light
+stutters. Up on the roof, the dish groans.
+> 1 Grab the deck. Call RoseDoggy. | goto ROSE_BIG
+
+@node ROSE_BIG
+A pink paw-print cursor tears through the
+red. "BORK BORK BORK. sorry, late. bath.
+KAZE's claim: forged. its ICE: soggy. watch."
+The racks spin up. KAZE CLAIM: VOID. The red
+turns gold. "ARF!! line's open for 10 sec.
+answer it, 7704. ur building. ~RoseDoggy"
+PIP looks at you. "your call."
+> 1 Send the petition. All of us. | cond: has PETITION & has CELL & has DISH & sig>=4 | goto END_GOOD
+> 2 Let PIP hold the line | cond: !has PETITION OR !has CELL OR !has DISH OR sig<4 | goto END_BITTER
+> 3 Read out the fridge's brass plate | cond: has SERIAL | goto END_FUNNY
+
+# ============================================================ ENDINGS
+
+@node END_GOOD ENDING:GOOD
+The petition climbs the cables, out the
+straightened dish, into the rain. Every
+name you gathered. Yours at the bottom.
+REGISTRY: OWNER = TENANTS OF BUILDING 77.
+Out on the scaffold, KAZE's banner peels
+off and drifts down into the canal.
+PIP, very small: "...what do i do now?"
+> 1 "Whatever you want. You live here." | goto EPI_GOOD
+
+@node EPI_GOOD
+EPILOGUE. Rent is a potluck now. Ko cooks,
+Dez DJs, Teo brings pigeons, Deenboi carries
+every table (he is a BULL). adam3845 orders
+the swirl fishcake on purpose. PIP gets unit
+7704½, a heater, and the high score.
+?has BLUE_OK: 7706's door is propped open again.
+?!has BLUE_OK: 7706 stays shut. The blue mug waits.
+?has KO_TAB: Ko tears your page out of the ledger.
+> 1 THE END (good). Back to the title | do: clearsave | goto TITLE
+
+@node END_BITTER ENDING:BITTERSWEET
+"okay," says PIP. "one more year. then one
+more. i don't mind." It lets go of its
+little body. The gold goes into the walls.
+The building answers: LANDLORD.
+KAZE's banner sags. The drone shell sits on
+the console, dark, like a teapot after tea.
+On the deck, one message: a paw print. ~R
+> 1 ... | goto EPI_BITTER
+
+@node EPI_BITTER
+EPILOGUE. Rent stays the same. The koi get
+fed every night; nobody sees by whom. Come
+home late and the hall light blinks twice:
+hi. adam3845 swears it spirals, for him.
+Deenboi fixes the boiler without being asked.
+?has BLUE_OK: lil blue sits with you on the stairs.
+?!has BLUE_OK: The mug you left at 7706 is gone by dawn.
+The arcade high score never changes again.
+> 1 THE END (bittersweet). Back to the title | do: clearsave | goto TITLE
+
+@node END_FUNNY ENDING:FUNNY
+You read off the brass plate: DRINKS UNIT
+0981. LEGAL ENTITY: YES. The city thinks
+about this for a long time. Then:
+ OWNER OF BUILDING 77: A VENDING FRIDGE.
+Twenty floors up, the fridge hums. Smugly.
+Somewhere, a netrunner barks off her chair.
+PIP: "oh no. oh, that's perfect."
+> 1 All hail the fridge | goto EPI_FUNNY
+
+@node EPI_FUNNY
+EPILOGUE. The new landlord sets rent at one
+melon soda a month, payable to itself.
+Meetings are held in front of it. It hums
+once for yes, twice for no. adam3845 has
+not heard a word: the screensaver's a spiral.
+KAZE's lawyers sue a fridge. They lose.
+PIP is assistant manager, and thrilled.
+> 1 THE END (funny). Back to the title | do: clearsave | goto TITLE
+
+# ============================================================ ENGINE HOOKS
+# KO      : entered when hp hits 0          (@onko)
+# CAUGHT  : entered when heat hits 5        (@onheat)
+# DEEN_SAVE: entered when hp DROPS to 1..2 and deen >= 1 (@onlow)
+
+@node KO
+Everything goes soft and grey.
+You wake on a bench at UMI NOODLE under a
+blanket that smells like broth. Auntie Ko,
+not looking up: "Nobody dies in Building
+77. They just get very tired. Eat."
+> 1 Eat. Go back out. | do: hp=4 | goto CHECKPOINT
+
+@node CAUGHT
+HEAT 5. A ring of KAZE drones boxes you in.
+WARDEN-9's voice, from all of them at once:
+"CITIZEN. YOU WILL BE ESCORTED HOME.
+FINE: 3 CREDS. ENJOY YOUR COMPLIANCE."
+?deen>=1: Somewhere close: heavy hooves. A huff.
+> 1 Pay up and go home | do: creds-3, heat=2 | goto CHECKPOINT
+> 2 Yell for Deenboi | cond: deen>=1 | do: deen-1, heat=3 | say: Deenboi bowls them over. "...Bull." | goto RETURN
+
+@node DEEN_SAVE
+Your knees go. Then the floor shakes.
+A wall of shaggy ginger fluff arrives,
+fringe swinging, and removes the problem,
+shoulder first. Deenboi scoops you up like
+a bag of rice. "Easy. Got you."
+> 1 "Thanks, big guy." | do: deen-1, hp+3 | say: A tiny smile under the fringe. HP +3. | goto RETURN
+> 2 "Thanks, cow." | do: deen-1, hp+2 | say: HUFF. "...BULL." Still helps. HP +2. | goto RETURN
